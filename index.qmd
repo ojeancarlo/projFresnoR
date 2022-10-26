@@ -1,0 +1,511 @@
+---
+title: "O que aconteceu com a banda Fresno?"
+author: "Jean Carlo da Silva"
+format: 
+  revealjs:
+    footer: "Análise da discografia da banda Fresno"
+    theme: night
+    preview-links: true
+    chalkboard: true
+    slide-number: c/t
+    show-slide-number: all
+    smaller: true
+    incremental: true
+knitr: 
+  opts_chunk: 
+    fig.align: "center"
+    echo: false
+date: "2022-10-09"
+---
+
+```{r setup}
+#| include: false
+#| warning: false
+knitr::opts_chunk$set(message = FALSE) 
+
+library(janitor)
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library(stringr)
+library(gghighlight)
+
+# Importa as bases de dados
+fresno <- readr::read_rds("dados/fresno.rds")
+fresno_toptracks <- readr::read_rds("dados/fresno_toptracks.rds")
+
+# Reestrutura a base 
+fresno_musicas <- fresno |>
+  dplyr::transmute(
+    musica = track_name,
+    numero_musica = track_number,
+    album = album_name,
+    acustica = acousticness,
+    dancabilidade = danceability,
+    energia = energy,
+    instrumentalidade = instrumentalness,
+    ao_vivo = liveness,
+    discurso = speechiness,
+    ritmo = tempo,
+    valencia = valence,
+    polaridade = sqrt(valencia^2 + energia^2),
+    modo = mode,
+    tempo_ritmico = time_signature,
+    duracao = duration_ms,
+    key_name = key_name,
+    mode_name = mode_name,
+    key_mode = key_mode,
+    data_lancamento = album_release_date,
+    id = track_id
+  ) |>
+  dplyr::mutate(
+    data_lancamento = lubridate::as_date(data_lancamento)
+  ) |>
+  dplyr::arrange(
+    data_lancamento
+  )
+
+fresno_albuns <- fresno |>
+  tidyr::unnest(album_images) |>
+  dplyr::filter(
+   width == "300" # define o tamanho da imagem
+  ) |>
+  dplyr::group_by(
+    "album" = album_name,
+    "ano_lancamento" = album_release_year,
+    "capa" = url
+  ) |>
+  dplyr::count(name = "musicas") |>
+  dplyr::arrange(ano_lancamento) |>
+  dplyr::relocate(album, ano_lancamento, musicas, capa)
+
+```
+
+## **O que é Fresno?**
+
+::: columns
+::: {.column width="55%"}
+::: {style="font-size: 1em; text-align: justify"}
+Nascida no início dos anos 2000, ainda em formação de colégio, a banda porto-alegrense tocou seus primeiros acordes em um ambiente efervescente de muita música pop-punk/hardcore/emocore no Brasil e no Mundo. Nesses quase 25 anos, a banda passou por altos e baixos: *boom* no cenário underground; chegada à uma grande gravadora; mudanças de integrantes; lançamento de DVD; show em grandes festivais; tour na Europa e etc. A banda que, hoje, é formada por Lucas Silveira, Gustavo Mantovani "Vavo" e Thiago Guerra se consolidou de vez no cenário nacional e conta com um grupo de fãs completamente fiel à trajetória da banda.
+:::
+:::
+
+::: {.column width="5%"}
+:::
+
+::: {.column width="40%"}
+\
+
+![Foto de divulgação no Spotify](https://s2.glbimg.com/xC1lgMse_tmd2E7xGtEhlKbH0rg=/0x0:2048x2048/924x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2021/0/W/Hsag8oTxyBvLfyZg58rw/fresno2021.jpg){width="1200"}
+:::
+:::
+
+. . .
+
+## **Mas por quê analisar isso?**
+
+::: {style="font-size: 1em; text-align: justify"}
+Um dos fatos que chamam a atenção na trajetória da banda é que, mesmo após tanto tempo na estrada, sempre se mantiveram em evidência. Tem sido muito comum acompanhar - através de redes sociais e portais de notícias - comentários elogiosos sobre o momento da banda, tal qual comentários de fãs e dos próprios integrantes falando em um "novo auge".
+
+\
+:::
+
+![Recortes de jornais e tuites sobre o momento da banda Fresno](images/02.png){fig-align="center" width="502"}
+
+## 
+
+::: {style="font-size: 1em; text-align: justify"}
+Esse é um dos principais motivos - ~~e, também, por ser minha banda favorita~~ - para olharmos de forma analítica para a obra da banda, buscando entender os momentos de alta e o panorama de novo auge depois de décadas, para responder: **o que aconteceu com a Fresno?**
+
+Assim, utilizando dados do Spotify, extraídos através do pacote spotifyr{}, o trabalho buscará responder essa questão, tendo como base alguns objetivos, como:
+
+::: incremental
+-   Entender como a Fresno estruturou e organizou seus trabalhos;
+
+-   Avaliar se houveram mudanças na construção das músicas ao longo do tempo;
+
+-   Identificar possíveis pontos de preferências do público na obra completa;
+
+-   Verificar se a estética da banda foi afetada pelo passar dos anos.
+:::
+:::
+
+## **Antes de começar: um dicionário**
+
+::: {style="font-size: 1em; text-align: justify"}
+Entretanto, antes de seguir com a análise, cabe detalhar algumas variáveis que estão presentes na base de dados do Spotify e serão abordadas no trabalho.
+:::
+
+**Informações detalhadas das músicas**
+
+::: {style="font-size: 0.95em; text-align: justify"}
+::: nonincremental
+1.  *Duração*: Tempo de duração da faixa (em minutos);
+2.  *Energia*: Mostra a intensidade das músicas, a percepção sobre a atividade da mesma.;
+3.  *Valência*: Variável que reflete a positividade musical contida na faixa (variando de "negativas" (com tristeza e/ou raiva) até "positivas" (felizes/alegres));
+4.  *Polaridade*: Método[¹](https://medium.com/analytics-vidhya/using-spotify-data-to-find-the-happiest-emo-song-20e37fdf9eb) para calcular músicas "felizes" e "tristes", com base na distância entre valência e energia. Revela músicas mais "felizes" e mais "tristes".
+5.  *Ritmo*: Estimativa geral em batidas por minuto (BPM), basicamente a velocidade/ritmo da faixa;
+6.  *Dançabilidade*: Indicador que reflete a compatibilidade da faixa com a dança o quão compatível é uma música com a dança.
+:::
+:::
+
+------------------------------------------------------------------------
+
+## Agora sim, ao trabalho
+
+<img src="https://media.tenor.com/JgPSDpxQq2gAAAAC/fresnorock-vavofresno.gif" style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 90%);"/>
+
+## **O que a discografia nos mostra?** 
+
+::: columns
+::: {.column width="48%\""}
+::: {style="font-size: 1em; text-align: justify"}
+\
+
+Ao todo, são **`r nrow(fresno_musicas)` músicas** que estão distribuídas em **`r dplyr::n_distinct(fresno_musicas$album)` álbuns** (retirando ep's, ao vivo e versões deluxe). São aproximadamente **`r round(sum(fresno_musicas$duracao)/60/1000, 0)` minutos de músicas e muita informação**.
+
+Como é possível observar, a banda não mudou o "tamanho" dos seus discos, de modo que todos eles tiveram duração bem parecida.
+
+**A quantidade média por discos é de `r round(mean(fresno_albuns$musicas), 1)` músicas**.
+
+:::
+:::
+
+::: {.column width="2%"}
+:::
+
+::: {.column width="46%"}
+```{r echo=FALSE}
+
+fresno_grafico_1 <- fresno_musicas |>
+  dplyr::select(musica, numero_musica, album, duracao, data_lancamento) |>
+  dplyr::mutate(
+    duracao = duracao/60/1000) |> 
+  pivot_longer(
+    cols = "duracao",
+    names_to = "caracteristica",
+    values_to = "valor"
+    ) |>
+  dplyr::mutate(
+    album = paste0(album, " (", lubridate::year(fresno_musicas$data_lancamento), ")"),
+    album = forcats::fct_reorder(album,
+                                 desc(data_lancamento))
+  ) |>
+  ggplot(aes(x = valor,
+             y = album,
+             color = "#008B8B",
+             fill = "#2f3231")) +
+  scale_fill_manual(values=c("#2f3231")) +
+  scale_color_manual(values = "#008B8B") +
+  geom_boxplot(show.legend = FALSE) +
+  geom_jitter(show.legend = FALSE, width = 2, size = 1, alpha = 0.3, color = "white") +
+  labs(
+    x = "\n Duração (min)",
+    title = "Duração das músicas",
+    subtitle = "Distribuição do tempo das músicas em seus respectivos discos\n",
+    color = "Atributo"
+  ) +
+  theme(
+    axis.text = element_text(face = "italic", colour = "white"),
+    axis.text.x = element_text(size = 8, colour = "white"),
+    axis.title.x = element_text(size = 6, colour = "white"),
+    axis.title.y = element_blank(),
+    plot.title = element_text(
+      hjust = 0,
+      size = 14,
+      face = "bold",
+      colour = "white"),
+    plot.subtitle = element_text(
+      hjust = 0,
+      size = 7,
+      colour = "white"),
+    plot.title.position = "plot",
+    axis.text.y = element_text(size = 8),
+    panel.background = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    strip.background = element_blank(),
+    plot.background = element_rect(fill = "#171918", color = "transparent"),
+    legend.background = element_rect(fill = "#171918", color = "transparent"),
+    legend.box.background = element_rect(fill = "#171918", color = "transparent")
+  ) +
+  xlim(0, 8) +
+  scale_y_discrete(labels = function(y) str_wrap(y, width = 20))
+
+
+
+```
+
+```{r out.width='100%', fig.height = 3.8, fig.width = 3, fig.align = 'center'}
+fresno_grafico_1
+```
+:::
+:::
+
+## 
+
+::: {style="font-size: 1em; text-align: justify"}
+Ao passo que é possível perceber que a Fresno manteve um certo padrão no tamanho de seus discos, é interessante observar como isso foi diferente na composição. Observando a **polaridade**, podemos notar que a banda teve sua fase de músicas mais "positivas/felizes" (2008 a 2012), mas que, atualmente, **tem preferido uma positividade musical mais baixa** - diminuindo a energia com a manutenção da valência.
+
+\
+:::
+
+```{r echo=FALSE}
+
+fresno_grafico_2 <- fresno_musicas |>
+  dplyr::mutate(
+    ano_lancamento = lubridate::year(fresno_musicas$data_lancamento),
+    album = paste0(album, " (", lubridate::year(fresno_musicas$data_lancamento), ")"),
+    album = forcats::fct_reorder(album,
+                                 data_lancamento)
+  ) |>
+  dplyr::select(musica, album, ano_lancamento, valencia, energia, polaridade) |>
+ggplot2::ggplot(ggplot2::aes(x = energia, y = valencia)) +
+  ggplot2::geom_point(size = 1.5, alpha = 0.3) +
+  #scale_color_gradient(low = "white", high = "#008B8B") +
+  labs(
+    y = "Energia \n",
+    x = "\n Valência",
+    title = "Sentimento das músicas",
+    subtitle = "Posição das músicas entre valência e energia \n"
+  ) +
+  theme(
+    axis.text = element_text(face = "italic", colour = "white"),
+    axis.text.x = element_text(size = 6, colour = "white"),
+    axis.title.x = element_text(size = 8, colour = "white"),
+    axis.text.y = element_text(size = 6),
+    axis.title.y = element_text(size = 8, colour = "white"),
+    plot.title = element_text(
+      hjust = 0,
+      size = 14,
+      face = "bold",
+      colour = "white"),
+    plot.subtitle = element_text(
+      hjust = 0,
+      size = 10,
+      colour = "white"),
+    plot.title.position = "plot",
+    plot.background = element_rect(fill = "#171918", color = "transparent"),
+    panel.border = element_rect(color = "#3b3f3e", fill = NA, size = 0.2),
+    panel.background = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.spacing = unit(.3, "lines"),
+    legend.background = element_rect(fill = "#171918", color = "transparent"),
+    legend.box.background = element_rect(fill = "#171918", color = "transparent"),
+    strip.background = element_rect(fill = "#3b3f3e"),
+    strip.text = element_text(color = "white", size = 8),
+
+  ) +
+  gghighlight(label_key = musica,
+              polaridade >= mean(fresno_musicas$polaridade),
+              unhighlighted_params = list(color = "white")) +
+  geom_point(color = "#008B8B", size = 2.5, alpha = 0.6) +
+  facet_wrap(~ album)
+
+```
+
+```{r out.width='100%', fig.height = 3, fig.width = 8, fig.align = 'center'}
+fresno_grafico_2
+```
+
+## **Música pra emo sofrer e dançar**
+
+::: {style="font-size: 1em; text-align: justify"}
+Ao mesmo tempo que a Fresno aposta em uma retomada de uma **polaridade emo**, também **revela sua característica mais "dançável" desde o início da banda**. O álbum mais recente ("Vou ter que me virar") traz 3 das músicas mais "dançantes" da história da banda. Uma ótima demonstração de que a banda aposta forte em uma sofrência dançante.
+
+\
+:::
+
+```{r}
+
+fresno_grafico_3 <- fresno_musicas |>
+  dplyr::mutate(
+    ano_lancamento = as.character(lubridate::year(fresno_musicas$data_lancamento)),
+    numero_musica = forcats::fct_reorder(as.character(numero_musica),
+                                         numero_musica)
+  ) |>
+  dplyr::select(musica, numero_musica, album, ano_lancamento, dancabilidade) |>
+  ggplot2::ggplot(ggplot2::aes(x = numero_musica, y = dancabilidade)) +
+  ggplot2::geom_col(color = "#3b3f3e", fill = "#008B8B", alpha = 0.8, size = 0) +
+  scale_y_continuous(limits = c(0,1), expand = c(0, 0)) + 
+  facet_grid(~ ano_lancamento) +
+  labs(
+    y = "Dançabilidade \n",
+    x = "\n Ordem das faixas",
+    title = "Aposta no ritmo e na dança",
+    subtitle = "Evolução da 'dançabilidade' nas músicas \n"
+  ) +
+  theme(
+    axis.text.x = element_text(size = 3, colour = "white"),
+    axis.title.x = element_text(size = 9, colour = "white"),
+    axis.text.y = element_text(size = 5, colour = "white"),
+    axis.title.y = element_text(size = 9, colour = "white"),
+    axis.ticks.x = element_blank(), 
+    plot.title = element_text(
+      hjust = 0,
+      size = 14,
+      face = "bold",
+      colour = "white"),
+    plot.subtitle = element_text(
+      hjust = 0,
+      size = 10,
+      colour = "white"),
+    plot.title.position = "plot",
+    plot.background = element_rect(fill = "#171918", color = "transparent"),
+    panel.border = element_rect(color = "#3b3f3e", fill = NA, size = 0.2),
+    panel.background = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.spacing = unit(.1, "lines"),
+    legend.background = element_rect(fill = "#171918", color = "transparent"),
+    legend.box.background = element_rect(fill = "#171918", color = "transparent"),
+    strip.background = element_rect(fill = "#3b3f3e"),
+    strip.text = element_text(color = "white", size = 10)
+  ) 
+
+```
+
+```{r out.width='100%', fig.height = 2.9, fig.width = 9, fig.align = 'center'}
+fresno_grafico_3
+```
+
+## 
+
+::: columns
+::: {.column width="55%"}
+```{r echo=FALSE}
+
+fresno_grafico_4 <- fresno_musicas |>
+  dplyr::mutate(
+    ano_lancamento = as.character(lubridate::year(fresno_musicas$data_lancamento)),
+    numero_musica = forcats::fct_reorder(as.character(numero_musica),
+                                         numero_musica),
+    album = paste0(album, " (", lubridate::year(fresno_musicas$data_lancamento), ")"),
+    album = forcats::fct_reorder(album,
+                                 desc(data_lancamento))
+  ) |>
+  dplyr::select(musica, numero_musica, album, ano_lancamento, ritmo, instrumentalidade, discurso) |>
+  dplyr::group_by(album) |>
+  dplyr::summarise(
+    ritmo_medio = mean(ritmo)
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(y = album, x = ritmo_medio)) +
+  ggplot2::geom_col(color = "#3b3f3e", fill = "#008B8B", alpha = 0.8, width = 0.8, size = 0) +
+  scale_x_continuous(limits = c(0,220)) +
+  labs(
+    x = "\n Batidas por minuto (BPM)",
+    title = "Constância na batida",
+    subtitle = "Evolução do 'ritmo' nas músicas \n"
+  ) +
+  theme(
+    axis.text = element_text(face = "italic", colour = "white"),
+    axis.text.x = element_text(size = 6, colour = "white"),
+    axis.title.x = element_text(size = 6, colour = "white"),
+    axis.text.y = element_text(size = 6),
+    axis.title.y = element_blank(),
+    plot.title = element_text(
+      hjust = 0,
+      size = 14,
+      face = "bold",
+      colour = "white"),
+    plot.subtitle = element_text(
+      hjust = 0,
+      size = 7,
+      colour = "white"),
+    plot.title.position = "plot",
+    plot.background = element_rect(fill = "#171918", color = "transparent"),
+    #panel.border = element_rect(color = "#3b3f3e", fill = NA, size = 0.2),
+    panel.background = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.spacing = unit(.1, "lines"),
+    legend.background = element_rect(fill = "#171918", color = "transparent"),
+    legend.box.background = element_rect(fill = "#171918", color = "transparent")
+  ) +
+   scale_y_discrete(labels = function(y) str_wrap(y, width = 20))
+
+```
+
+```{r out.width='100%', fig.height = 3.3, fig.width = 3, fig.align = 'center'}
+fresno_grafico_4
+```
+:::
+
+::: {.column width="3%"}
+:::
+
+::: {.column width="42%"}
+::: {style="font-size: 1em; text-align: justify"}
+\
+
+Observar como a banda também optou por **manter a média de batidas por minuto (BPM) nos discos** denota uma certa manutenção fiel ao estilo que seguiu e criou. A retomada da média no último disco, após uma leve redução em "Sua Alegria Foi Cancelada (2019)", aliado ao aumento da dançabilidade, permite entender como a aposta, de fato, está em **músicas com força e ritmo**.
+:::
+:::
+:::
+
+## **Mas o que o público pensa?**
+
+::: {style="font-size: 1em; text-align: justify"}
+Observando a **popularidade do Spotify**, fica um pouco mais evidente como a discografia da banda é positivamente regular. O top10 atual da banda conta com músicas dos primeiros discos (Ciano, 2006), com músicas da primeira metade da história da banda (Revanche, 2010 e Infinito, 2012), até chegar às músicas de sua fasemais recente (Vou ter que me virar, 2021). **O público ajuda a entender os vários auges em 25 anos**.
+
+\
+:::
+
+```{r}
+
+
+fresno_toptracks |>
+  dplyr::mutate(lancamento = lubridate::year(lancamento),
+                album = paste0(album, " (", lancamento, ")")) |>
+  dplyr::select(musica, popularidade, lancamento) |>
+  dplyr::arrange(desc(popularidade)) |> 
+  dplyr::rename(
+    "Música" = musica,
+    "Popularidade" = popularidade,
+    "Ano de Lançamento" = lancamento
+  ) |> 
+   knitr::kable(align = "c") |> 
+    kableExtra::kable_styling(
+    bootstrap_options = "striped",
+    stripe_color = "gray", 
+    font_size = 16
+  )
+```
+
+## Algumas conclusões
+
+::: {style="font-size: 1em; text-align: justify"}
+Com base no que foi exposto e analisado, é possível dizer que o que aconteceu com a Fresno está relacionado a uma aposta na fidelidade de seu estilo e na oxigenação das músicas com novas linguagens. Dessa forma, podemos concluir alguns pontos sobre o que aconteceu com a Fresno:
+
+::: incremental
+-   Apostou em estruturas de discos **muito parecidas**, sem muitas diferenças de quantidade ou tamanho das suas músicas, garantindo **mudanças sutis e a manutenção da marca Fresno**;
+
+-   **Diminuiu a intensidade média dos álbuns com o passar dos anos, mantendo a positividade baixa padrão**. Esse movimento está diretamente associado a um **reforço da sua marca emo** da origem da banda;
+
+-   Manteve a velocidade padrão dos seus álbuns, mas **apostou em uma versão mais dançável do seu estilo**, acrescendentado muitos elementos de ritmo. Isso denota uma **ressignificação da banda acompanhando o amadurecimento do seu público**.
+:::
+:::
+
+
+## 
+
+Além disso, o mais importante de tudo é que: **a Fresno seguiu sendo cada vez mais Fresno**.
+
+<img src="https://64.media.tumblr.com/tumblr_mbrtir1qFa1roz14so1_500.gifv" style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 90%);"/>
+
+Obrigado pela leitura.
+
+## Referências
+
+::: {style="font-size: 1em; text-align: justify"}
+::: nonincremental
+1.  ["Analysis of Top Tracks in Spotify"](https://web.stanford.edu/~elenatuz/courses/stats32-aut2021/Spotify_analysis.html), 21/10/2021, por Elena Tuzhilina;
+2.  ["Agora dá para brincar com o algoritmo de recomendação do Spotify e fazer playlists"](https://gizmodo.uol.com.br/spotify-playlist-recomendacao-algoritmo/), 06/02/2018, por Sidney Fussel;
+3.  ["Using Spotify data to find the happiest emo song"](https://medium.com/analytics-vidhya/using-spotify-data-to-find-the-happiest-emo-song-20e37fdf9eb), 17/01/2021, por Chris Williamson
+:::
+:::
