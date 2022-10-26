@@ -15,6 +15,6 @@ O trabalho buscou responder algumas questões, tendo como base os seguintes obje
 
 Toda análise foi construída utilizando Quarto no R.
 
-Os dados estão disponíveis no diretório 
+Os dados estão disponíveis no diretório "dados/".
 
 🎸 Obrigado pela atenção e boa leitura! 🎸
