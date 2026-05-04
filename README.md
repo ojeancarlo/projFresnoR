@@ -1,5 +1,8 @@
 # 🎸 O que aconteceu com a banda Fresno? (projFresnoR)
 
+[![R](https://img.shields.io/badge/R-276DC3?style=for-the-badge&logo=r&logoColor=white)](https://www.r-project.org/)
+[![Quarto](https://img.shields.io/badge/Quarto-447099?style=for-the-badge&logo=quarto&logoColor=white)](https://quarto.org/)
+
 **Trabalho de Conclusão do curso de Relatórios e Apresentações (curso-R)** desenvolvido em R e Quarto para análise da discografia da banda Fresno.
 
 O projeto busca responder questões centrais sobre a evolução da banda: transformando dados musicais do Spotify em *insights* sobre a estruturação dos álbuns, mudanças na composição, preferências do público e a estética sonora ao longo do tempo.
