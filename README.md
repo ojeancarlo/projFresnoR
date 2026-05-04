@@ -7,8 +7,6 @@
 
 O projeto busca responder questões centrais sobre a evolução da banda: transformando dados musicais do Spotify em *insights* sobre a estruturação dos álbuns, mudanças na composição, preferências do público e a estética sonora ao longo do tempo.
 
-🔗 [Acesse o Relatório no Quarto Pubs](insira_o_link_aqui)
-
 ### Funcionalidades e Itens Técnicos
 
 * **Extração de Dados (ETL):** Consumo automatizado de metadados e características de áudio da discografia da banda via API do Spotify, utilizando o pacote `spotifyR`.
