@@ -1,20 +1,21 @@
-# O que aconteceu com a banda Fresno? (projFresnoR)
+# 🎸 O que aconteceu com a banda Fresno? (projFresnoR)
 
-**Trabalho de Conclusão do curso de Relatórios e Apresentações** 
-\
-curso-R - 10/09/2022
+**Trabalho de Conclusão do curso de Relatórios e Apresentações (curso-R)** desenvolvido em R e Quarto para análise da discografia da banda Fresno.
 
-Projeto consiste em analisar a discografia da banda Fresno a partir dos dados disponibilizados no Spotify (consumidos através do pacote spotifyR{}). 
+O projeto busca responder questões centrais sobre a evolução da banda: transformando dados musicais do Spotify em *insights* sobre a estruturação dos álbuns, mudanças na composição, preferências do público e a estética sonora ao longo do tempo.
 
-O trabalho buscou responder algumas questões, tendo como base os seguintes objetivos:
+🔗 [Acesse o Relatório no Quarto Pubs](insira_o_link_aqui)
 
-1. Entender como a Fresno estruturou e organizou seus trabalhos;
-2. Avaliar se houveram mudanças na construção das músicas ao longo do tempo;
-3. Identificar possíveis pontos de preferências do público na obra completa;
-4. Verificar se a estética da banda foi afetada pelo passar dos anos.
+### Funcionalidades e Itens Técnicos
 
-Toda análise foi construída utilizando Quarto no R.
+* **Extração de Dados (ETL):** Consumo automatizado de metadados e características de áudio da discografia da banda via API do Spotify, utilizando o pacote `spotifyR`.
+* **Análise Estrutural e Estética:** Avaliação de como a banda organizou seus trabalhos ao longo do tempo e identificação de mudanças na construção e na estética das músicas.
+* **Mapeamento de Preferências:** Análise focada em identificar possíveis pontos de preferência do público considerando a obra completa da banda.
+* **Reporting e Reprodutibilidade:** Toda a análise de dados, estatísticas e visualizações foram construídas de forma integrada e reprodutível utilizando o ecossistema **Quarto** no R.
+* **Gestão de Dados:** Organização de diretórios estruturada, com os dados consumidos salvos e centralizados no diretório `dados/` para facilitar a replicação do estudo.
 
-Os dados estão disponíveis no diretório "dados/".
+### Tecnologias utilizadas
 
-🎸 Obrigado pela atenção e boa leitura! 🎸
+* **Linguagem:** R
+* **Relatórios e Apresentações:** Quarto
+* **Extração de Dados (API):** `spotifyR`
